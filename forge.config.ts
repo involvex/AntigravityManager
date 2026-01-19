@@ -22,6 +22,7 @@ const config: ForgeConfig = {
     name: 'Antigravity Manager',
     executableName: 'antigravity-manager',
     icon: 'images/icon', // Electron Forge automatically adds .icns/.ico
+    extraResource: ['src/assets'], // Copy assets folder to resources/assets
   },
   rebuildConfig: {},
   hooks: {

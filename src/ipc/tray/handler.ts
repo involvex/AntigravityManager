@@ -51,9 +51,14 @@ export function initTray(mainWindow: BrowserWindow) {
   }
 
   const inDevelopment = process.env.NODE_ENV === 'development';
+  // In production, extraResource copies 'src/assets' folder to 'resources/assets'
   const iconPath = inDevelopment
     ? path.join(process.cwd(), 'src/assets/tray.png')
-    : path.join(process.resourcesPath, 'assets/tray.png');
+    : path.join(process.resourcesPath, 'assets', 'tray.png');
+
+  logger.info(
+    `Tray icon path: ${iconPath}, inDevelopment: ${inDevelopment}, resourcesPath: ${process.resourcesPath}`,
+  );
 
   const icon = nativeImage.createFromPath(iconPath);
 
