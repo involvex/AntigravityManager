@@ -53,7 +53,7 @@ export const generateApiKey = async (): Promise<string> => {
   // Save to config
   const config = ConfigManager.loadConfig();
   config.proxy.api_key = newKey;
-  ConfigManager.saveConfig(config);
+  await ConfigManager.saveConfig(config);
 
   return newKey;
 };

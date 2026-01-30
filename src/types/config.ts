@@ -20,9 +20,11 @@ export const AppConfigSchema = z.object({
   theme: z.string(),
   auto_refresh: z.boolean(),
   refresh_interval: z.number(), // minutes
-  auto_sync: z.boolean(), // 是否自动同步
+  auto_sync: z.boolean(),
   sync_interval: z.number(), // minutes
-  auto_startup: z.boolean(), // 是否随系统启动
+  auto_startup: z.boolean(),
+  error_reporting_enabled: z.boolean(),
+  privacy_consent_asked: z.boolean().optional().default(false), // Optional for backward compatibility
   default_export_path: z.string().nullable().optional(), // 导出路径
   proxy: ProxyConfigSchema,
 });
@@ -39,6 +41,8 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   auto_sync: false,
   sync_interval: 5,
   auto_startup: false,
+  error_reporting_enabled: true, // Default to disabled for privacy
+  privacy_consent_asked: false, // Whether the user has been asked for consent
   default_export_path: null,
   proxy: {
     enabled: false,

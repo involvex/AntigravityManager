@@ -57,8 +57,6 @@ export const MainLayout: React.FC = () => {
             isCollapsed ? 'w-[70px]' : 'w-64',
           )}
         >
-          {/* Toggle Button - Visible on hover or always if preferred. 
-              Positioned absolute on the border line */}
           <Button
             variant="ghost"
             size="icon"

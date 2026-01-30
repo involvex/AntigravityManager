@@ -12,6 +12,6 @@ export const configRouter = os.router({
     .input(AppConfigSchema)
     .output(z.void())
     .handler(async ({ input }) => {
-      saveConfig(input);
+      await saveConfig(input);
     }),
 });

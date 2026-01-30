@@ -4,6 +4,23 @@ import { getAgentDir } from './paths';
 
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 
+const LOG_WINDOW_MS = 30_000;
+const MAX_LOG_ENTRIES = 200;
+
+interface LogEntry {
+  timestamp: number;
+  level: LogLevel;
+  message: string;
+  formatted: string;
+}
+
+type SentryReporter = (payload: {
+  level: LogLevel;
+  message: string;
+  error?: Error;
+  logs: LogEntry[];
+}) => void;
+
 /**
  * Safely stringify an object, handling circular references
  * This prevents "Converting circular structure to JSON" errors
@@ -33,6 +50,9 @@ function safeStringify(obj: unknown): string {
 
 class Logger {
   private logFilePath: string;
+  private recentLogs: LogEntry[] = [];
+  private sentryReporter: SentryReporter | null = null;
+  private sentryEnabled = false;
 
   constructor() {
     const agentDir = getAgentDir();
@@ -75,10 +95,55 @@ class Logger {
     console.log(`${color}[${level.toUpperCase()}]${reset} ${message}`, ...args);
   }
 
+  private pruneLogs(now: number) {
+    while (this.recentLogs.length > 0 && now - this.recentLogs[0].timestamp > LOG_WINDOW_MS) {
+      this.recentLogs.shift();
+    }
+
+    if (this.recentLogs.length > MAX_LOG_ENTRIES) {
+      this.recentLogs = this.recentLogs.slice(-MAX_LOG_ENTRIES);
+    }
+  }
+
+  private extractError(args: unknown[]): Error | undefined {
+    for (const arg of args) {
+      if (arg instanceof Error) {
+        return arg;
+      }
+    }
+    return undefined;
+  }
+
+  setSentryReporter(reporter: SentryReporter | null) {
+    this.sentryReporter = reporter;
+  }
+
+  setErrorReportingEnabled(enabled: boolean) {
+    this.sentryEnabled = enabled;
+  }
+
   log(level: LogLevel, message: string, ...args: unknown[]) {
     const formattedMessage = this.formatMessage(level, message, ...args);
+    const now = Date.now();
+    this.recentLogs.push({
+      timestamp: now,
+      level,
+      message,
+      formatted: formattedMessage,
+    });
+    this.pruneLogs(now);
+
     this.writeToConsole(level, message, ...args);
     this.writeToFile(formattedMessage);
+
+    if (level === 'error' && this.sentryEnabled && this.sentryReporter) {
+      this.sentryReporter({
+        level,
+        message,
+        error: this.extractError(args),
+        logs: [...this.recentLogs],
+      });
+    }
   }
 
   info(message: string, ...args: unknown[]) {

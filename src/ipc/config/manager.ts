@@ -7,6 +7,9 @@ import { logger } from '../../utils/logger';
 const CONFIG_FILENAME = 'gui_config.json';
 
 export class ConfigManager {
+  private static cachedConfig: AppConfig | null = null;
+  private static saveQueue: Promise<void> = Promise.resolve();
+
   private static getConfigPath(): string {
     const appDataDir = getAppDataDir();
     if (!fs.existsSync(appDataDir)) {
@@ -20,6 +23,7 @@ export class ConfigManager {
       const configPath = this.getConfigPath();
       if (!fs.existsSync(configPath)) {
         logger.info(`Config: File not found at ${configPath}, returning default`);
+        this.cachedConfig = DEFAULT_APP_CONFIG;
         return DEFAULT_APP_CONFIG;
       }
 
@@ -28,7 +32,7 @@ export class ConfigManager {
 
       // Merge with default to ensure new fields are present
       // Zod parse helps validate
-      const merged = {
+      const merged: AppConfig = {
         ...DEFAULT_APP_CONFIG,
         ...raw,
         proxy: { ...DEFAULT_APP_CONFIG.proxy, ...(raw.proxy || {}) },
@@ -45,22 +49,35 @@ export class ConfigManager {
       // Handle Anthropic Mapping Map vs Object
       // In JSON it's object
 
-      return merged as AppConfig;
+      this.cachedConfig = merged;
+      return merged;
     } catch (e) {
       logger.error('Config: Failed to load config', e);
+      this.cachedConfig = DEFAULT_APP_CONFIG;
       return DEFAULT_APP_CONFIG;
     }
   }
 
-  static saveConfig(config: AppConfig): void {
-    try {
-      const configPath = this.getConfigPath();
-      const content = JSON.stringify(config, null, 2);
-      fs.writeFileSync(configPath, content, 'utf-8');
-      logger.info(`Config: Saved to ${configPath}`);
-    } catch (e) {
-      logger.error('Config: Failed to save config', e);
-      throw e;
-    }
+  static getCachedConfig(): AppConfig | null {
+    return this.cachedConfig;
+  }
+
+  static async saveConfig(config: AppConfig): Promise<void> {
+    const configPath = this.getConfigPath();
+    const content = JSON.stringify(config, null, 2);
+
+    this.saveQueue = this.saveQueue
+      .catch(() => undefined)
+      .then(async () => {
+        await fs.promises.writeFile(configPath, content, 'utf-8');
+        this.cachedConfig = config;
+        logger.info(`Config: Saved to ${configPath}`);
+      })
+      .catch((e) => {
+        logger.error('Config: Failed to save config', e);
+        throw e;
+      });
+
+    return this.saveQueue;
   }
 }

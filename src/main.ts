@@ -1,8 +1,8 @@
+import './instrument'; // MUST be the first import to ensure Sentry initializes before app ready
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
 import fs from 'fs';
 
-// import { installExtension, REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
 import { ipcMain } from 'electron/main';
 import { ipcContext } from '@/ipc/context';
 import { IPC_CHANNELS } from './constants';
